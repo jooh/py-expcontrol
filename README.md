@@ -9,18 +9,25 @@ collecting keyboard responses and monitoring MRI scanner pulses) if you are
 coding everything up from scratch.
 
 # Install
-clone this repo and do `python setup.py install`. Or just to 'pip install
-expcontrol'.
+clone this repo and do `python setup.py install`. A reasonably recent
+version should also be on [pypi](https://pypi.python.org/pypi/expcontrol)
+so try `pip install expcontrol`. TODO: there will be pre-built packages on
+[my anaconda repository](https://anaconda.org/jcarlin) soon.
 
 # Do I need [psychopy](http://psychopy.org)?
-In theory, no. All the psychopy-dependent code is in the psychopydep
-module, so psychopy could be swapped out for another timing/opengl/response
-logging solution as desired. In practice, psychopy is the only solution
-that is implemented. For now, we list psychopy as a formal dependency but
-this may change in the future.
+At the moment you do, but the goal is to remove this dependency eventually.
+All the psychopy-dependent code is in the psychopydep module, so psychopy
+could be swapped out for another timing/opengl/response logging solution as
+desired.
 
 # Development stage
-Very early days. Use at your own risk.
+Very early days. Use at your own risk. Basic behavioural testing should
+work.
+
+# TO DO
+* Eye tracker interface with Eyelink
+* Scanner pulse and other serial interface fun stuff
+* Auditory events
 
 # License
 ISC. See [separate file](LICENSE).
