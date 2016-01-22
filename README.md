@@ -11,8 +11,9 @@ coding everything up from scratch.
 # Install
 clone this repo and do `python setup.py install`. A reasonably recent
 version should also be on [pypi](https://pypi.python.org/pypi/expcontrol)
-so try `pip install expcontrol`. TODO: there will be pre-built packages on
-[my anaconda repository](https://anaconda.org/jcarlin) soon.
+so try `pip install expcontrol`. Finally, perhaps most reliable of all is
+to just use this build on [my anaconda
+repository](https://anaconda.org/jcarlin/expcontrol).
 
 # Do I need [psychopy](http://psychopy.org)?
 At the moment you do, but the goal is to remove this dependency eventually.
