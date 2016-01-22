@@ -17,5 +17,5 @@ setup(name='expcontrol',
       packages=['expcontrol'],
       install_requires = ['numpy','pandas','psychopy','sqlalchemy'],
       long_description=open(os.path.join(os.path.dirname(__file__),
-          'README')).read()
+          'README.md')).read()
       )
