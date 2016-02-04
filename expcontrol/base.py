@@ -36,7 +36,7 @@ class Experiment(object):
         Initialise an Experiment instance.
 
         Keyword arguments:
-        conditions -- dict of Event-derived instances (including
+        conditions -- dict or list of Event-derived instances (including
             FixedEventSeq).
         preevent -- An event-derived instance that is called before the
             main trial sequence with an endtime of numpy.inf. This instance
@@ -66,8 +66,8 @@ class Experiment(object):
 
         Arguments:
         controller -- a Controller instance
-        conditionkeys -- a list of keys into self.conditions, which defines
-            the sequence of conditions over the run.'''
+        conditionkeys -- a list of keys or indices into self.conditions,
+            which defines the sequence of conditions over the run.'''
         # unpack to a fixed sequence of conditions
         # note that we leave name blank so we don't risk overwriting the
         # condition names in nested FixedEventSeq instances
@@ -96,7 +96,7 @@ class Experiment(object):
         return res,preres,postres
 
     def save(self,res,path,customdict=None):
-        engine = sqlalchemy.create_engine('sqlite:///' + path)
+        self.engine = sqlalchemy.create_engine('sqlite:///' + path)
         if customdict:
             res = res.copy()
             for k,v in customdict.iteritems():
