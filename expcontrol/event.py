@@ -47,7 +47,7 @@ class Event(object):
             constructed conveniently by concatenating return values of
             previous trials (see FixedEventSeq).'''
         res = pandas.DataFrame(columns=eventkeys,
-                index=[controller.clock()])
+                index=[controller.clock()],dtype=float)
         res['name'] = self.name
         res['oncall'] = self.oncall(controller,currentres)
         skipahead = False
@@ -130,7 +130,7 @@ class FixedEventSeq(Event):
         starttime = controller.clock()
         endtimes_trial = starttime + self.endtimes
         # nb, we ignore currentres
-        newres = pandas.DataFrame(columns=eventkeys)
+        newres = pandas.DataFrame(columns=eventkeys,dtype=float)
         for ind,ev in enumerate(self.events):
             newres = pandas.concat([newres,ev(controller=controller,
                 endtime=endtimes_trial[ind],currentres=newres)],
