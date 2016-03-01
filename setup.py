@@ -4,7 +4,7 @@ except ImportError:
     from distutils.core import setup
 import os
 setup(name='expcontrol',
-      version='0.1.1',
+      version='0.1.2',
       author='Johan Carlin',
       author_email='johan.carlin@gmail.com',
       url='http://github.com/jooh/expcontrol',

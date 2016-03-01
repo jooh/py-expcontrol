@@ -2,6 +2,24 @@ import numpy
 import datetime
 import sqlalchemy
 from . import event
+import functools
+
+def addcustomdict(f):
+    '''
+    Decorator for save functionality (currently in Experiment class).
+    '''
+    @functools.wraps(f)
+    def wrapper(*args,**kwargs):
+        # a few assumptions here: 1) customdict is in kwargs, 2) res is in
+        # args
+        if 'customdict' in kwargs and kwargs['customdict']:
+            # assigning to args requires list type
+            args = list(args)
+            args[1] = args[1].copy()
+            for k,v in kwargs['customdict'].iteritems():
+                args[1][k] = v
+        return f(*args,**kwargs)
+    return wrapper
 
 class Controller(object):
     '''
@@ -19,7 +37,7 @@ class Controller(object):
 
     def __call__(self):
         '''
-        check for responses and flip the screen. If this is called often
+        Check for responses and flip the screen. If this is called often
         enough you will achieve sync with the screen refresh (assuming that
         your window method holds until the refresh).'''
         response = self.response()
@@ -95,11 +113,13 @@ class Experiment(object):
         res['context'] = self.context
         return res,preres,postres
 
-    def save(self,res,path,customdict=None):
+    @addcustomdict
+    def to_sql(self,res,path,customdict=None):
         self.engine = sqlalchemy.create_engine('sqlite:///' + path)
-        if customdict:
-            res = res.copy()
-            for k,v in customdict.iteritems():
-                res[k] = v
         res.to_sql(self.context,engine,if_exists='append')
+        return
+
+    @addcustomdict
+    def to_hdf(self,res,path,customdict=None):
+        res.to_hdf(path,self.context,append=True)
         return
