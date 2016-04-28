@@ -171,8 +171,6 @@ class EventSeq(Event):
         '''
         assert type(self) is not EventSeq, 'Direct use of super-class ' \
                 'is not supported. Use derived sub-classes'
-        if self.verbose:
-            print currentev.to_string(header=False)
         if self.name:
             # the additional if statement here is useful to control when
             # existing condition fields get over-written (generally you
@@ -213,6 +211,8 @@ class EventSeqRelTime(EventSeq):
                     axis=0)
             outevlog = pandas.concat([outevlog,thisevlog],axis=0)
             outresplog = pandas.concat([outresplog,thisresp],axis=0)
+            if self.verbose:
+                print '%.1f\t %s' % (t,ev.name)
         return super(EventSeqRelTime,self).__call__(controller,endtime,outevlog),outresplog
 
 class EventSeqAbsTime(EventSeq):
@@ -299,6 +299,8 @@ class FeedbackEvent(DrawEvent):
         return
 
     def oncall(self,controller,currentevlog,currentresplog):
+        super(FeedbackEvent,self).oncall(controller,currentevlog,
+                currentresplog)
         thisscore = self.scorer(currentevlog,currentresplog)
         # ensure copy
         self.drawinstances = self.commondraw[:]
@@ -336,6 +338,8 @@ class DetectionEvent(DrawEvent):
         currentresp -- not used here.
         '''
         # reset the timing at trial start
+        super(DetectionEvent,self).oncall(controller,currentevent,
+                currentresp)
         self.starttime = controller.clock()
         return
 
@@ -395,6 +399,8 @@ class DecisionEvent(DetectionEvent):
         wascorrect[numpy.in1d(response,self.incorrect)] = 0
         wascorrect[numpy.in1d(response,self.correct)] = 1
         rt[wascorrect != 1] = numpy.nan
+        if self.verbose:
+            print 'correct=%s\tkey=%s' % (wascorrect,response)
         return wascorrect,rt
 
 class NBackEvent(DecisionEvent):
@@ -413,6 +419,9 @@ class NBackEvent(DecisionEvent):
         return
 
     def oncall(self,controller,currentevlog,currentresplog):
+        # important to super here to reset starttime
+        super(NBackEvent,self).oncall(controller,currentevlog,
+                currentresplog)
         if self.nshift==0:
             currentname = self.name
         else:
@@ -457,7 +466,9 @@ class SynchEvent(DetectionEvent):
                 skiponresponse=targetkey,duration=duration,name=name,**kwargs)
         return
 
-    def oncall(self,controller,currentevlog,*args,**kwargs):
+    def oncall(self,controller,currentevlog,currentresplog):
+        super(SynchEvent,self).oncall(controller,currentevlog,
+                currentresplog)
         if self.verbose:
             print 'waiting for pulse...'
         return
