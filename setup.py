@@ -4,7 +4,7 @@ except ImportError:
     from distutils.core import setup
 import os
 setup(name='expcontrol',
-      version='0.1.2',
+      version='0.2.0',
       author='Johan Carlin',
       author_email='johan.carlin@gmail.com',
       url='http://github.com/jooh/expcontrol',
@@ -15,7 +15,7 @@ setup(name='expcontrol',
           'vision','perception','experiment','science','research'],
       license='ISC',
       packages=['expcontrol'],
-      install_requires = ['numpy','pandas','psychopy','sqlalchemy'],
+      install_requires = ['numpy','pandas'],
       long_description=open(os.path.join(os.path.dirname(__file__),
           'README.md')).read()
       )

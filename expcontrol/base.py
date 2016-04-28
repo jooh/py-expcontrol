@@ -1,6 +1,5 @@
 import numpy 
 import datetime
-import sqlalchemy
 from . import event
 import functools
 
@@ -26,13 +25,14 @@ class Controller(object):
     Control experiment timing, stimulus delivery and response collection.
     '''
 
-    def __init__(self,window=None,response=None,clock=None):
+    def __init__(self,window=None,response=None,clock=None,eyetracker=None):
         '''
         Initialise a controller instance. For example inputs, see
         expcontrol.psychopydep.window, KeyboardResponse and clock.'''
         self.window = window
         self.response = response
         self.clock = clock
+        self.eyetracker = eyetracker
         return
 
     def __call__(self):
@@ -40,30 +40,32 @@ class Controller(object):
         Check for responses and flip the screen. If this is called often
         enough you will achieve sync with the screen refresh (assuming that
         your window method holds until the refresh).'''
-        response = self.response()
         frametime = self.window()
-        return response,frametime
+        response,resptime = self.response()
+        return response,resptime,frametime
 
 class Experiment(object):
     '''
     Class for running a set of trials in some experiment.'''
 
     def __init__(self,conditions={},preevent=None,postevent=None,
-            subject=None,context=None):
+            subject=None,context=None,verbose=False):
         '''
         Initialise an Experiment instance.
 
         Keyword arguments:
         conditions -- dict or list of Event-derived instances (including
-            FixedEventSeq).
+            EventSeq).
         preevent -- An event-derived instance that is called before the
             main trial sequence with an endtime of numpy.inf. This instance
             should practically always be initialised with
-            skiponresponse=True.  postevent -- An event-derived instance
-            that is called after the main trial sequence. Otherwise similar
-            to preevent above.
+            skiponresponse=True.
+        postevent -- An event-derived instance that is called after the
+            main trial sequence. Otherwise similar to preevent above.
         subject -- str for log file. Prompted if undefined.
-        context -- str for log file. Prompted if undefined.'''
+        context -- str for log file. Prompted if undefined.
+        verbose -- print various info.
+        '''
         self.conditions = conditions
         self.preevent = preevent
         self.postevent = postevent
@@ -76,7 +78,7 @@ class Experiment(object):
         self.session = numpy.datetime64(datetime.datetime.now())
         return
 
-    def __call__(self,controller,conditionkeys):
+    def __call__(self,controller,conditionkeys,seqclass=event.EventSeqAbsTime):
         '''
         Run a sequence of trials of the experiment, and return panda
         dataframes corresponding to the main trial sequence and the output
@@ -85,36 +87,42 @@ class Experiment(object):
         Arguments:
         controller -- a Controller instance
         conditionkeys -- a list of keys or indices into self.conditions,
-            which defines the sequence of conditions over the run.'''
+            which defines the sequence of conditions over the run.
+        seqclass -- class to use for creating the trial sequence. Use
+            EventSeqRelTime if absolute timing is not possible (e.g.,
+            self-timed events, synching to pulses).
+        '''
         # unpack to a fixed sequence of conditions
         # note that we leave name blank so we don't risk overwriting the
-        # condition names in nested FixedEventSeq instances
-        sequence = event.FixedEventSeq(None,
-                [self.conditions[key] for key in conditionkeys])
+        # condition names in nested EventSeq-derived instances
+        sequence = seqclass(
+                [self.conditions[key] for key in conditionkeys],
+                name=None)
         # run preevent, zero the clock
-        preres = None
+        preevlog = None
         if self.preevent:
-            preres = self.preevent(controller,numpy.inf)
-            preres['subject'] = self.subject
-            preres['session'] = self.session
-            preres['context'] = self.context
+            preevlog,preresplog = self.preevent(controller,numpy.inf)
+            preevlog['subject'] = self.subject
+            preevlog['session'] = self.session
+            preevlog['context'] = self.context
         controller.clock.start()
         # main sequence
-        res = sequence(controller)
+        eventlog,resplog = sequence(controller)
         # possible post-flight
-        postres = None
+        postevlog = None
         if self.postevent:
-            postres = self.postevent(controller,numpy.inf)
-            postres['subject'] = self.subject
-            postres['session'] = self.session
-            postres['context'] = self.context
-        res['subject'] = self.subject
-        res['session'] = self.session
-        res['context'] = self.context
-        return res,preres,postres
+            postevlog,postresplog = self.postevent(controller,numpy.inf)
+            postevlog['subject'] = self.subject
+            postevlog['session'] = self.session
+            postevlog['context'] = self.context
+        eventlog['subject'] = self.subject
+        eventlog['session'] = self.session
+        eventlog['context'] = self.context
+        return eventlog,resplog,preevlog,preresplog,postevlog,postresplog
 
     @addcustomdict
     def to_sql(self,res,path,customdict=None):
+        import sqlalchemy
         self.engine = sqlalchemy.create_engine('sqlite:///' + path)
         res.to_sql(self.context,engine,if_exists='append')
         return

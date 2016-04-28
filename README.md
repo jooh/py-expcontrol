@@ -26,8 +26,6 @@ Very early days. Use at your own risk. Basic behavioural testing should
 work.
 
 # TO DO
-* Eye tracker interface with Eyelink
-* Scanner pulse and other serial interface fun stuff
 * Auditory events
 
 # License
