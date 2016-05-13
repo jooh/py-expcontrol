@@ -50,7 +50,7 @@ class PulseClock(Clock):
     wait. These estimates are stored in self.periodhistory.
     '''
     def __init__(self,key,period,pulsedur=0.01,tolerance=.1,timeout=20., \
-            winhand=None,verbose=False):
+            winhand=None,verbose=False,ndummies=0):
         self.period = period
         self.pulsedur = pulsedur
         self.tolerance = tolerance
@@ -58,8 +58,10 @@ class PulseClock(Clock):
         self.timeout = timeout
         self.winhand = winhand
         self.verbose = verbose
-        super(PulseClock,self).__init__()
-        self.keyhand = KeyboardResponse(key,self.ppclock)
+        assert ndummies >= 0, 'ndummies must be 0 or greater'
+        self.ndummies = ndummies
+        super(PulseClock, self).__init__()
+        self.keyhand = KeyboardResponse(key, self.ppclock)
         return
 
     def waitpulse(self):
@@ -78,12 +80,12 @@ class PulseClock(Clock):
         # need to first reset the second clock to make the timeout counter
         # in waitpulse work properly
         super(PulseClock,self).start()
-        if self.verbose:
-            print 'waiting for pulse...'
-        # but this means that the starttime recorded here is off
-        starttime = self.waitpulse()
-        if self.verbose:
-            print 'got it!'
+        # nb +1 so we always wait for a pulse. dummies are in ADDITION to this
+        for dummy in range(self.ndummies+1):
+            if self.verbose:
+                print 'waiting for pulse %d' % dummy
+                # but this means that the starttime recorded here is off
+                starttime = self.waitpulse()
         # so we adjust the clock to compensate for starttime (not quite the
         # same as zeroing the clock - if time has passed since the pulse
         # was received this operation will produce a current clock time >0
