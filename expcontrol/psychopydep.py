@@ -1,10 +1,11 @@
+'''Expcontrol functionality that depends on psychopy.'''
+import collections
+import numpy
 import psychopy.core
 import psychopy.visual
 import psychopy.logging
 import psychopy.event
-import numpy
 from psychopy.hardware.emulator import SyncGenerator
-import collections
 
 class Clock(object):
     '''
@@ -14,7 +15,7 @@ class Clock(object):
     def __init__(self):
         '''Initialise a clock instance.'''
         self.ppclock = psychopy.core.Clock()
-        super(Clock,self).__init__()
+        super(Clock, self).__init__()
         psychopy.logging.setDefaultClock(self.ppclock)
         return
 
@@ -27,11 +28,13 @@ class Clock(object):
         self.ppclock.reset()
         return self()
 
-    def wait(self,time):
+    def wait(self, time):
+        '''wait for time duration (s).'''
         psychopy.core.wait(time)
         return
 
-    def waituntil(self,time):
+    def waituntil(self, time):
+        '''wait until the clock reaches time.'''
         self.wait(time-self())
         return
 
@@ -49,14 +52,13 @@ class PulseClock(Clock):
     called with enough remaining time that a pulse is expected during the
     wait. These estimates are stored in self.periodhistory.
     '''
-    def __init__(self,key,period,pulsedur=0.01,tolerance=.1,timeout=20., \
-            winhand=None,verbose=False,ndummies=0):
+    def __init__(self, key, period, pulsedur=0.01, tolerance=.1, timeout=20., \
+                 verbose=False, ndummies=0):
         self.period = period
         self.pulsedur = pulsedur
         self.tolerance = tolerance
         self.periodhistory = [period]
         self.timeout = timeout
-        self.winhand = winhand
         self.verbose = verbose
         assert ndummies >= 0, 'ndummies must be 0 or greater'
         self.ndummies = ndummies
@@ -65,21 +67,21 @@ class PulseClock(Clock):
         return
 
     def waitpulse(self):
-        calltime = self()
-        k,t = self.keyhand.waitkey(self.timeout)
-        assert k,'exceeded %.0fs timeout without receiving pulse' % \
-                    self.timeout
+        '''wait until a pulse is received. An exception is raised if the wait
+        exceeds self.timeout.'''
+        key, keytime = self.keyhand.waitkey(self.timeout)
+        assert key, 'exceeded %.0fs timeout without receiving pulse' % \
+            self.timeout
         # first time of response if we got multiple
-        keytime = t[0]
+        keytime = keytime[0]
         return keytime
 
     def start(self):
-        # flip and get keys to clear out any existing key presses
-        self.winhand()
-        k,t = self.keyhand()
+        '''reset the clock and return once the correct pulse has been received
+        (one for each of self.ndummies+1).'''
         # need to first reset the second clock to make the timeout counter
         # in waitpulse work properly
-        super(PulseClock,self).start()
+        super(PulseClock, self).start()
         # nb +1 so we always wait for a pulse. dummies are in ADDITION to this
         for dummy in range(self.ndummies+1):
             if self.verbose:
@@ -93,7 +95,8 @@ class PulseClock(Clock):
         # return current time after all this
         return self()
 
-    def waituntil(self,time):
+    def waituntil(self, time):
+        '''wait until time, catching any pulses along the way.'''
         # current time
         now = self()
         nowpulse = now / self.period
@@ -102,26 +105,25 @@ class PulseClock(Clock):
         if npulseleft < 1:
             # less than a self.period left, so wait it out using standard
             # second clock
-            super(PulseClock,self).waituntil(time)
+            super(PulseClock, self).waituntil(time)
             return
         # if we make it here, there must be pulses to catch
         actualtime = self.waitpulse()
         # we expect the next pulse to be number
         predictpulse = numpy.ceil(now / self.period)
-        # and if that's true this is when it should happen
-        predicttime = predictpulse * self.period
         # now we can update our estimate of period like so...
         newpulse = actualtime / predictpulse
         if numpy.abs(newpulse-self.period) > self.tolerance:
             raise Exception('pulse period beyond tolerance: ' +
-                    'expected=%.4f, estimated=%.4f' % (self.period,newpulse))
+                            'expected=%.4f, estimated=%.4f' % (self.period,
+                                                               newpulse))
         self.period = newpulse
         if self.verbose:
-            print 'Pulse at %.2f. tr=%.3f' % (actualtime,newpulse)
+            print 'Pulse at %.2f. tr=%.3f' % (actualtime, newpulse)
         self.periodhistory.append(newpulse)
         # avoid catching the same pulse twice
         if (time-self()) > self.pulsedur:
-            core.wait(self.pulsedur)
+            self.wait(self.pulsedur)
         # we recurse with a depth of npulseleft. This is important to
         # handle cases where you are waiting n pulses + a bit extra
         self.waituntil(time)
@@ -133,22 +135,24 @@ class Window(object):
     Psychopy's visual.Window.
     '''
 
-    def __init__(self,*args,**kwargs):
+    def __init__(self, *args, **kwargs):
         '''
         Initialise a window instance. All input arguments are piped to
         psychopy.visual.Window.
         '''
-        self.winhand = psychopy.visual.Window(*args,**kwargs)
+        self.winhand = psychopy.visual.Window(*args, **kwargs)
         # flip a few times because it is thought this helps stabilise
         # timings
-        for i in xrange(50):
-            self()
+        [self() for flip in range(50)]
         return
 
     def __call__(self):
+        '''flip the screen and return an exact time stamp of when the flip
+        occurred.'''
         return self.winhand.flip()
 
     def close(self):
+        '''close the screen.'''
         self.winhand.close()
         return
 
@@ -158,47 +162,59 @@ class KeyboardResponse(object):
     '''
     esckey = 'escape'
 
-    def __init__(self,keylist,clock):
-        if not isinstance(keylist,collections.Iterable):
+    def __init__(self, keylist, clock):
+        '''
+        Initialise a KeyboardResponse instance. keylist is a list of valid keys
+        (all other inputs are ignored). clock is a handle to a current Psychopy
+        clock instance.
+        '''
+        if not isinstance(keylist, collections.Iterable):
             keylist = [keylist]
         self.keylist = keylist + [self.esckey]
         self.ppclock = clock
         return
 
     def __call__(self):
-        # map list of (k,t) tuples to one k tuples and one t tuple
+        '''Check for responses.'''
         ktup = psychopy.event.getKeys(keyList=self.keylist,
-            timeStamped=self.ppclock)
+                                      timeStamped=self.ppclock)
         return self.parsekey(ktup)
 
-    def waitkey(self,dur=float('inf')):
-        ktup = psychopy.event.waitKeys(maxWait=dur,keyList=self.keylist,
-                timeStamped=self.ppclock)
+    def waitkey(self, dur=float('inf')):
+        '''wait for a key press for a set duration (default inf).'''
+        ktup = psychopy.event.waitKeys(maxWait=dur, keyList=self.keylist,
+                                       timeStamped=self.ppclock)
         return self.parsekey(ktup)
 
-    def parsekey(self,ktup):
-        k = []
-        t = []
+    def parsekey(self, ktup):
+        '''Convert timestamped key presses to separate key and time stamp
+        arrays. Used internally to support __call__ and waitkey.'''
+        keys = []
+        timestamps = []
         if ktup:
-            k,t = zip(*ktup)
-        if self.esckey in k:
+            keys, timestamps = zip(*ktup)
+        if self.esckey in keys:
             raise Exception('user pressed escape')
-        return numpy.array(k),numpy.array(t)
+        return numpy.array(keys), numpy.array(timestamps)
 
 class PulseEmulator(object):
     '''
     Simulate pulses at some period. Just a convenience wrapper for
     psychopy.hardware.emulator.SynchGenerator.
     '''
-    def __init__(self,*args,**kwargs):
-        self.pulsehand = SyncGenerator(*args,**kwargs)
+    def __init__(self, *args, **kwargs):
+        '''Initialise a PulseEmulator instance. All arguments are passed to
+        SynchGenerator.'''
+        self.pulsehand = SyncGenerator(*args, **kwargs)
         return
 
     def start(self):
+        '''Start sending pulses.'''
         self.pulsehand.start()
         psychopy.core.runningThreads.append(self.pulsehand)
         return
 
     def stop(self):
+        '''Stop sending pulses.'''
         self.pulsehand.stop()
         return

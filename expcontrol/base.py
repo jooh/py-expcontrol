@@ -1,23 +1,23 @@
-import numpy 
+'''base expcontrol functionality.'''
 import datetime
-from . import event
 import functools
+import numpy
+from . import event
 
-def addcustomdict(f):
+def addcustomdict(funhand):
     '''
     Decorator for save functionality (currently in Experiment class).
     '''
-    @functools.wraps(f)
-    def wrapper(*args,**kwargs):
-        # a few assumptions here: 1) customdict is in kwargs, 2) res is in
-        # args
+    @functools.wraps(funhand)
+    def wrapper(*args, **kwargs): # pylint: disable=missing-docstring
+        # a few assumptions here: 1) customdict is in kwargs, 2) res is in args
         if 'customdict' in kwargs and kwargs['customdict']:
             # assigning to args requires list type
             args = list(args)
             args[1] = args[1].copy()
-            for k,v in kwargs['customdict'].iteritems():
-                args[1][k] = v
-        return f(*args,**kwargs)
+            for extrafield, extraval in kwargs['customdict'].iteritems():
+                args[1][extrafield] = extraval
+        return funhand(*args, **kwargs)
     return wrapper
 
 class Controller(object):
@@ -25,7 +25,7 @@ class Controller(object):
     Control experiment timing, stimulus delivery and response collection.
     '''
 
-    def __init__(self,window=None,response=None,clock=None,eyetracker=None):
+    def __init__(self, window=None, response=None, clock=None, eyetracker=None):
         '''
         Initialise a controller instance. For example inputs, see
         expcontrol.psychopydep.window, KeyboardResponse and clock.'''
@@ -41,15 +41,15 @@ class Controller(object):
         enough you will achieve sync with the screen refresh (assuming that
         your window method holds until the refresh).'''
         frametime = self.window()
-        response,resptime = self.response()
-        return response,resptime,frametime
+        response, resptime = self.response()
+        return response, resptime, frametime
 
 class Experiment(object):
     '''
     Class for running a set of trials in some experiment.'''
 
-    def __init__(self,conditions={},preevent=None,postevent=None,
-            subject=None,context=None,verbose=False):
+    def __init__(self, conditions=[], preevent=None, postevent=None,
+                 subject=None, context=None):
         '''
         Initialise an Experiment instance.
 
@@ -64,7 +64,6 @@ class Experiment(object):
             main trial sequence. Otherwise similar to preevent above.
         subject -- str for log file. Prompted if undefined.
         context -- str for log file. Prompted if undefined.
-        verbose -- print various info.
         '''
         self.conditions = conditions
         self.preevent = preevent
@@ -78,7 +77,7 @@ class Experiment(object):
         self.session = numpy.datetime64(datetime.datetime.now())
         return
 
-    def __call__(self,controller,conditionkeys,seqclass=event.EventSeqAbsTime):
+    def __call__(self, controller, conditionkeys, seqclass=event.EventSeqAbsTime):
         '''
         Run a sequence of trials of the experiment, and return panda
         dataframes corresponding to the main trial sequence and the output
@@ -95,39 +94,47 @@ class Experiment(object):
         # unpack to a fixed sequence of conditions
         # note that we leave name blank so we don't risk overwriting the
         # condition names in nested EventSeq-derived instances
-        sequence = seqclass(
-                [self.conditions[key] for key in conditionkeys],
-                name=None)
+        sequence = seqclass([self.conditions[key] for key in conditionkeys],
+                            name=None)
         # run preevent, zero the clock
         preevlog = None
         if self.preevent:
-            preevlog,preresplog = self.preevent(controller,numpy.inf)
+            preevlog, preresplog = self.preevent(controller, numpy.inf)
             preevlog['subject'] = self.subject
             preevlog['session'] = self.session
             preevlog['context'] = self.context
         controller.clock.start()
         # main sequence
-        eventlog,resplog = sequence(controller)
+        eventlog, resplog = sequence(controller)
         # possible post-flight
         postevlog = None
         if self.postevent:
-            postevlog,postresplog = self.postevent(controller,numpy.inf)
+            postevlog, postresplog = self.postevent(controller, numpy.inf)
             postevlog['subject'] = self.subject
             postevlog['session'] = self.session
             postevlog['context'] = self.context
         eventlog['subject'] = self.subject
         eventlog['session'] = self.session
         eventlog['context'] = self.context
-        return eventlog,resplog,preevlog,preresplog,postevlog,postresplog
+        return eventlog, resplog, preevlog, preresplog, postevlog, postresplog
 
     @addcustomdict
-    def to_sql(self,res,path,customdict=None):
+    def to_sql(self, res, path, customdict=None): # pylint: disable=unused-argument
+        '''
+        Save data to SQL database with self.context as key. If self.context
+        exists, we append.
+        '''
         import sqlalchemy
-        self.engine = sqlalchemy.create_engine('sqlite:///' + path)
-        res.to_sql(self.context,engine,if_exists='append')
+        engine = sqlalchemy.create_engine('sqlite:///' + path)
+        res.to_sql(self.context, engine, if_exists='append')
         return
 
     @addcustomdict
-    def to_hdf(self,res,path,customdict=None):
-        res.to_hdf(path,self.context,append=True)
+    def to_hdf(self, res, path, customdict=None): # pylint: disable=unused-argument
+
+        '''
+        Save data to HDF database with self.context as key. If the self.context
+        field already exists, we append.
+        '''
+        res.to_hdf(path, self.context, append=True)
         return
