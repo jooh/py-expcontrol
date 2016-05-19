@@ -11,21 +11,16 @@ coding everything up from scratch.
 # Install
 clone this repo and do `python setup.py install`. A reasonably recent
 version should also be on [pypi](https://pypi.python.org/pypi/expcontrol)
-so try `pip install expcontrol`. Finally, perhaps most reliable of all is
-to just use this build on [my anaconda
-repository](https://anaconda.org/jcarlin/expcontrol).
+so try `pip install expcontrol`. 
 
 # Do I need [psychopy](http://psychopy.org)?
-At the moment you do, but the goal is to remove this dependency eventually.
-All the psychopy-dependent code is in the psychopydep module, so psychopy
-could be swapped out for another timing/opengl/response logging solution as
-desired.
-
-# Development stage
-Very early days. Use at your own risk. Basic behavioural testing should
-work.
+It's not a dependency, but at the moment you won't be able to use the package
+for much without it. All the psychopy-dependent code is in the psychopydep
+module, so psychopy can be swapped out for another timing/opengl/response
+logging solution as desired.
 
 # TO DO
+* Tests
 * Auditory events
 
 # License
