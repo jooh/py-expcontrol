@@ -7,7 +7,7 @@ setup(name='expcontrol',
       version='0.2.3',
       author='Johan Carlin',
       author_email='johan.carlin@gmail.com',
-      url='http://github.com/jooh/expcontrol',
+      url='http://github.com/jooh/py-expcontrol',
       description= ('Easy control of typical experiments in psychology '
           'and neuroscience, including stimulus presentation, timing, '
           'response collection and logging.'),
