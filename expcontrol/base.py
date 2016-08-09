@@ -90,6 +90,14 @@ class Experiment(object):
         seqclass -- class to use for creating the trial sequence. Use
             EventSeqRelTime if absolute timing is not possible (e.g.,
             self-timed events, synching to pulses).
+
+        Returns:
+        eventlog -- pandas DataFrame of events (see expcontrol.event)
+        resplog -- pandas DataFrame of responses (see expcontrol.event)
+        preevlog -- events during preevent
+        preresplog -- responses during preevent 
+        postevlog -- events during postevent
+        postresplog -- responses during postevent
         '''
         # unpack to a fixed sequence of conditions
         # note that we leave name blank so we don't risk overwriting the

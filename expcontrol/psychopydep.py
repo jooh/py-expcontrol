@@ -86,8 +86,8 @@ class PulseClock(Clock):
         for dummy in range(self.ndummies+1):
             if self.verbose:
                 print 'waiting for pulse %d' % dummy
-                # but this means that the starttime recorded here is off
-                starttime = self.waitpulse()
+            # but this means that the starttime recorded here is off
+            starttime = self.waitpulse()
         # so we adjust the clock to compensate for starttime (not quite the
         # same as zeroing the clock - if time has passed since the pulse
         # was received this operation will produce a current clock time >0
